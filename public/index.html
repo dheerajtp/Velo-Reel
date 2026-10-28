@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>VeloReel — local video editor</title>
+  <meta name="description" content="Trim, color grade, overlay stats and images. Exports MP4 locally.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2386e8bf'/%3E%3Ctext x='32' y='42' font-family='Arial' font-size='24' font-weight='700' text-anchor='middle' fill='%2306281d'%3EVR%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="mark" aria-hidden="true">VR</span>
+      <div>
+        <h1>VeloReel</h1>
+        <p>Video editor · local only</p>
+      </div>
+    </div>
+    <button id="resetBtn" class="ghost" type="button">Reset look</button>
+  </header>
+
+  <main class="layout">
+    <section class="stage" aria-label="Video preview">
+      <div class="canvas-shell" id="dropZone">
+        <canvas id="preview" width="405" height="720" aria-label="Composition preview"></canvas>
+        <div id="emptyState" class="empty">
+          <p class="empty-title">Drop a clip here</p>
+          <p class="empty-sub">MP4, MOV, or WebM · stays on this Mac</p>
+          <button id="chooseBtn" class="primary" type="button">Choose video</button>
+          <input id="fileInput" type="file" accept="video/*" hidden>
+        </div>
+      </div>
+
+      <div class="transport">
+        <button id="playBtn" class="play" type="button" disabled>Play</button>
+        <span id="timeLabel" class="time">0:00.0 / 0:00.0</span>
+        <input id="scrub" class="scrub" type="range" min="0" max="0" step="0.01" value="0" aria-label="Playhead" disabled>
+        <span id="uploadStatus" class="status" role="status" aria-live="polite"></span>
+      </div>
+
+      <p class="stage-hint">Click the preview to play or pause. The clip never leaves this Mac.</p>
+    </section>
+
+    <aside class="panel" aria-label="Editor controls">
+      <section class="group">
+        <h2>Clip</h2>
+        <div class="row">
+          <span id="clipName" class="clip-name">No clip loaded</span>
+          <div class="clip-actions">
+            <button id="changeBtn" class="ghost small" type="button" disabled>Replace</button>
+            <button id="removeBtn" class="ghost small danger" type="button" disabled>Remove</button>
+          </div>
+        </div>
+        <div class="field">
+          <div class="field-head">
+            <label for="startRange">In point</label>
+            <output id="startOut" for="startRange">0:00.0</output>
+          </div>
+          <input id="startRange" type="range" min="0" max="0" step="0.1" value="0" disabled>
+        </div>
+        <div class="field">
+          <div class="field-head">
+            <label for="endRange">Out point</label>
+            <output id="endOut" for="endRange">0:00.0</output>
+          </div>
+          <input id="endRange" type="range" min="0" max="0" step="0.1" value="0" disabled>
+        </div>
+        <p id="clipHint" class="hint">Load a clip to trim it.</p>
+      </section>
+
+      <section class="group">
+        <h2>Format</h2>
+        <div class="segmented" role="group" aria-label="Aspect ratio">
+          <button type="button" data-aspect="9:16" class="active">9:16<span>Reels</span></button>
+          <button type="button" data-aspect="16:9">16:9<span>YouTube</span></button>
+          <button type="button" data-aspect="1:1">1:1<span>Feed</span></button>
+        </div>
+      </section>
+
+      <section class="group">
+        <h2>Look</h2>
+        <div id="presets" class="presets" role="group" aria-label="Color presets"></div>
+
+        <div class="field">
+          <div class="field-head">
+            <label for="brightness">Brightness</label>
+            <output id="brightnessOut" for="brightness">0</output>
+          </div>
+          <input id="brightness" type="range" min="-30" max="30" step="1" value="0">
+        </div>
+        <div class="field">
+          <div class="field-head">
+            <label for="contrast">Contrast</label>
+            <output id="contrastOut" for="contrast">100%</output>
+          </div>
+          <input id="contrast" type="range" min="60" max="160" step="1" value="100">
+        </div>
+        <div class="field">
+          <div class="field-head">
+            <label for="saturation">Saturation</label>
+            <output id="saturationOut" for="saturation">100%</output>
+          </div>
+          <input id="saturation" type="range" min="0" max="200" step="1" value="100">
+        </div>
+        <div class="field">
+          <div class="field-head">
+            <label for="warmth">Warmth</label>
+            <output id="warmthOut" for="warmth">0</output>
+          </div>
+          <input id="warmth" type="range" min="-100" max="100" step="1" value="0">
+        </div>
+        <label class="check">
+          <input id="vignette" type="checkbox">
+          <span>Soft vignette</span>
+        </label>
+        <p class="hint">Preview is a close approximation. The export applies the grade exactly.</p>
+      </section>
+
+      <section class="group">
+        <h2>Stats overlay</h2>
+        <label class="check">
+          <input id="overlayShow" type="checkbox" checked>
+          <span>Show stats</span>
+        </label>
+        <div class="grid2">
+          <label class="input">
+            <span>Distance</span>
+            <input id="distance" type="text" maxlength="40" placeholder="42.3 km" autocomplete="off">
+          </label>
+          <label class="input">
+            <span>Elevation</span>
+            <input id="elevation" type="text" maxlength="40" placeholder="310 m" autocomplete="off">
+          </label>
+        </div>
+        <p class="hint">One line, bottom-left. Leave a field blank to omit it.</p>
+      </section>
+
+      <section class="group">
+        <h2>Image overlay</h2>
+        <div class="row">
+          <span id="imageName" class="clip-name">No image</span>
+          <div class="clip-actions">
+            <button id="imageChooseBtn" class="ghost small" type="button">Choose</button>
+            <button id="imageRemoveBtn" class="ghost small danger" type="button" disabled>Remove</button>
+          </div>
+        </div>
+        <div class="row image-source-row">
+          <button id="imagePasteBtn" class="ghost small" type="button">Paste image</button>
+          <span id="imageStatus" class="status" role="status" aria-live="polite"></span>
+        </div>
+        <input id="imageInput" type="file" accept="image/png,image/jpeg,image/webp" hidden>
+        <div class="field">
+          <div class="field-head">
+            <span class="field-label">Position</span>
+          </div>
+          <div class="positions" role="group" aria-label="Image position">
+            <button type="button" data-position="top-left" disabled>Top left</button>
+            <button type="button" data-position="top-right" class="active" disabled>Top right</button>
+            <button type="button" data-position="bottom-left" disabled>Bottom left</button>
+            <button type="button" data-position="bottom-right" disabled>Bottom right</button>
+          </div>
+        </div>
+        <div class="field">
+          <div class="field-head">
+            <label for="imageSize">Size</label>
+            <output id="imageSizeOut" for="imageSize">30%</output>
+          </div>
+          <input id="imageSize" type="range" min="12" max="50" step="1" value="30" disabled>
+        </div>
+        <p class="hint">Copy an image from any app, then press ⌘V anywhere. You can also choose a file or drop an image on the preview.</p>
+      </section>
+
+      <section class="group export-group">
+        <button id="exportBtn" class="primary wide" type="button" disabled>Export MP4</button>
+        <div class="bar" aria-hidden="true"><div id="barFill" class="bar-fill"></div></div>
+        <p id="exportStatus" class="status" role="status" aria-live="polite">Load a clip to export.</p>
+        <a id="downloadLink" class="download" hidden>Download video</a>
+      </section>
+    </aside>
+  </main>
+
+  <video id="video" class="offscreen" playsinline preload="auto"></video>
+  <script src="/app.js"></script>
+</body>
+</html>
